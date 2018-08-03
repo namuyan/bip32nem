@@ -13,6 +13,7 @@ import codecs
 from . import Base58
 
 from hashlib import sha256
+from binascii import b2a_hex
 from ecdsa.curves import SECP256k1
 from ecdsa.ecdsa import int_to_string, string_to_int
 from ecdsa.numbertheory import square_root_mod_prime as sqrt_mod
@@ -338,20 +339,20 @@ class BIP32Key(object):
     def dump(self):
         "Dump key fields mimicking the BIP0032 test vector format"
         print("   * Identifier")
-        print("     * (hex):      ", self.Identifier().encode('hex'))
-        print("     * (fpr):      ", self.Fingerprint().encode('hex'))
+        print("     * (hex):      ", b2a_hex(self.Identifier()))
+        print("     * (fpr):      ", b2a_hex(self.Fingerprint()))
         print("     * (main addr):", self.Address())
         if self.public is False:
             print("   * Secret key")
-            print("     * (hex):      ", self.PrivateKey().encode('hex'))
+            print("     * (hex):      ", self.PrivateKey().hex())
             print("     * (wif):      ", self.WalletImportFormat())
         print("   * Public key")
-        print("     * (hex):      ", self.PublicKey().encode('hex'))
+        print("     * (hex):      ", b2a_hex(self.PublicKey()))
         print("   * Chain code")
-        print("     * (hex):      ", self.C.encode('hex'))
+        print("     * (hex):      ", b2a_hex(self.C))
         print("   * Serialized")
-        print("     * (pub hex):  ", self.ExtendedKey(private=False, encoded=False).encode('hex'))
-        print("     * (prv hex):  ", self.ExtendedKey(private=True, encoded=False).encode('hex'))
+        print("     * (pub hex):  ", b2a_hex(self.ExtendedKey(private=False, encoded=False)))
+        print("     * (prv hex):  ", b2a_hex(self.ExtendedKey(private=True, encoded=False)))
         print("     * (pub b58):  ", self.ExtendedKey(private=False, encoded=True))
         print("     * (prv b58):  ", self.ExtendedKey(private=True, encoded=True))
 
