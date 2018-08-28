@@ -14,11 +14,7 @@ def ReadInput(fname, count, is_hex):
    f = sys.stdin if fname == '-' else open(fname, 'rb')
 
    with f:
-      if count is not None:
-         n = count*2 if is_hex else count
-         data = f.read(n)
-      else:
-         data = f.read()
+      data = f.read()
 
    if is_hex:
       data = data.strip().decode('hex')
@@ -120,6 +116,8 @@ def ReadEntropy(args):
    entropy = ReadInput(args.from_file, args.amount/8, args.input_hex)
    if len(entropy) < args.amount/8:
       raise Exception("Insufficient entropy provided")
+   if len(entropy) > args.amount/8:
+      raise Exception("Entropy string longer than expected, adjust amount with -n ?")
    if args.verbose:
       src = 'stdin' if args.from_file == '-' else args.from_file
       print("Creating master key and seed using %i bits of entropy read from %s" % (args.amount, src))
