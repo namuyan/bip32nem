@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(
-    name='bip32utils',
+    name='bip32utilz',
     version='0.3-3',
     author='Johnathan Corgan, Corgan Labs',
     author_email='johnathan@corganlabs.com',
