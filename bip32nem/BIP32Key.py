@@ -13,7 +13,7 @@ import codecs
 from bip32nem import Base58
 
 from hashlib import sha256
-from binascii import b2a_hex
+
 from ecdsa.curves import SECP256k1
 from ecdsa.ecdsa import int_to_string, string_to_int
 from ecdsa.numbertheory import square_root_mod_prime as sqrt_mod
@@ -109,7 +109,7 @@ class BIP32Key(object):
         key = BIP32Key(secret=secret, chain=chain, depth=depth, index=child, fpr=fpr, public=is_pubkey,
                        testnet=is_testnet)
         if not is_pubkey and public:
-            key = key.SetPublic()
+            key.SetPublic()
         return key
 
     # Normal class initializer
@@ -330,22 +330,23 @@ class BIP32Key(object):
     def dump(self):
         """Dump key fields mimicking the BIP0032 test vector format"""
         print("   * Identifier")
-        print("     * (hex):      ", b2a_hex(self.Identifier()))
-        print("     * (fpr):      ", b2a_hex(self.Fingerprint()))
+        print("     * (hex):      ", self.Identifier().hex())
+        print("     * (fpr):      ", self.Fingerprint().hex())
         print("     * (main addr):", self.Address())
         if self.public is False:
             print("   * Secret key")
             print("     * (hex):      ", self.PrivateKey().hex())
             print("     * (wif):      ", self.WalletImportFormat())
         print("   * Public key")
-        print("     * (hex):      ", b2a_hex(self.PublicKey()))
+        print("     * (hex):      ", self.PublicKey().hex())
         print("   * Chain code")
-        print("     * (hex):      ", b2a_hex(self.C))
+        print("     * (hex):      ", self.C.hex())
         print("   * Serialized")
-        print("     * (pub hex):  ", b2a_hex(self.ExtendedKey(private=False, encoded=False)))
-        print("     * (prv hex):  ", b2a_hex(self.ExtendedKey(private=True, encoded=False)))
+        print("     * (pub hex):  ", self.ExtendedKey(private=False, encoded=False).hex())
         print("     * (pub b58):  ", self.ExtendedKey(private=False, encoded=True))
-        print("     * (prv b58):  ", self.ExtendedKey(private=True, encoded=True))
+        if self.public is False:
+            print("     * (prv hex):  ", self.ExtendedKey(private=True, encoded=False).hex())
+            print("     * (prv b58):  ", self.ExtendedKey(private=True, encoded=True))
 
 
 def test():
