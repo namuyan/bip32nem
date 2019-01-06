@@ -10,7 +10,7 @@ import hashlib
 import ecdsa
 import struct
 import codecs
-from . import Base58
+from bip32nem import Base58
 
 from hashlib import sha256
 from binascii import b2a_hex
@@ -18,16 +18,18 @@ from ecdsa.curves import SECP256k1
 from ecdsa.ecdsa import int_to_string, string_to_int
 from ecdsa.numbertheory import square_root_mod_prime as sqrt_mod
 
-MIN_ENTROPY_LEN = 128        # bits
-BIP32_HARDEN    = 0x80000000 # choose from hardened set of child keys
-CURVE_GEN       = ecdsa.ecdsa.generator_secp256k1
-CURVE_ORDER     = CURVE_GEN.order()
-FIELD_ORDER     = SECP256k1.curve.p()
-INFINITY        = ecdsa.ellipticcurve.INFINITY
-EX_MAIN_PRIVATE = [ codecs.decode('0488ade4', 'hex') ] # Version strings for mainnet extended private keys
-EX_MAIN_PUBLIC  = [ codecs.decode('0488b21e', 'hex'), codecs.decode('049d7cb2', 'hex') ] # Version strings for mainnet extended public keys
-EX_TEST_PRIVATE = [ codecs.decode('04358394', 'hex') ] # Version strings for testnet extended private keys
-EX_TEST_PUBLIC  = [ codecs.decode('043587CF', 'hex') ] # Version strings for testnet extended public keys
+MIN_ENTROPY_LEN = 128  # bits
+BIP32_HARDEN = 0x80000000  # choose from hardened set of child keys
+CURVE_GEN = ecdsa.ecdsa.generator_secp256k1
+CURVE_ORDER = CURVE_GEN.order()
+FIELD_ORDER = SECP256k1.curve.p()
+INFINITY = ecdsa.ellipticcurve.INFINITY
+EX_MAIN_PRIVATE = [codecs.decode('0488ade4', 'hex')]  # Version strings for mainnet extended private keys
+EX_MAIN_PUBLIC = [codecs.decode('0488b21e', 'hex'),
+                  codecs.decode('049d7cb2', 'hex')]  # Version strings for mainnet extended public keys
+EX_TEST_PRIVATE = [codecs.decode('04358394', 'hex')]  # Version strings for testnet extended private keys
+EX_TEST_PUBLIC = [codecs.decode('043587CF', 'hex')]  # Version strings for testnet extended public keys
+
 
 class BIP32Key(object):
 
@@ -35,16 +37,16 @@ class BIP32Key(object):
     #
     @staticmethod
     def fromEntropy(entropy, public=False, testnet=False):
-        "Create a BIP32Key using supplied entropy >= MIN_ENTROPY_LEN"
-        if entropy == None:
-            entropy = os.urandom(MIN_ENTROPY_LEN/8) # Python doesn't have os.random()
-        if not len(entropy) >= MIN_ENTROPY_LEN/8:
+        """Create a BIP32Key using supplied entropy >= MIN_ENTROPY_LEN"""
+        if entropy is None:
+            entropy = os.urandom(MIN_ENTROPY_LEN // 8)  # Python doesn't have os.random()
+        if not len(entropy) >= MIN_ENTROPY_LEN // 8:
             raise ValueError("Initial entropy %i must be at least %i bits" %
-                                (len(entropy), MIN_ENTROPY_LEN))
-        I = hmac.new(b"Bitcoin seed", entropy, hashlib.sha512).digest()
-        Il, Ir = I[:32], I[32:]
+                             (len(entropy), MIN_ENTROPY_LEN))
+        i64 = hmac.new(b"Bitcoin seed", entropy, hashlib.sha512).digest()
+        il, ir = i64[:32], i64[32:]
         # FIXME test Il for 0 or less than SECP256k1 prime field order
-        key = BIP32Key(secret=Il, chain=Ir, depth=0, index=0, fpr=b'\0\0\0\0', public=False, testnet=testnet)
+        key = BIP32Key(secret=il, chain=ir, depth=0, index=0, fpr=b'\0\0\0\0', public=False, testnet=testnet)
         if public:
             key.SetPublic()
         return key
@@ -97,18 +99,18 @@ class BIP32Key(object):
             # Python3 FIX
             lsb = secret[0] & 1 if type(secret[0]) == int else ord(secret[0]) & 1
             x = string_to_int(secret[1:])
-            ys = (x**3+7) % FIELD_ORDER # y^2 = x^3 + 7 mod p
+            ys = (x ** 3 + 7) % FIELD_ORDER  # y^2 = x^3 + 7 mod p
             y = sqrt_mod(ys, FIELD_ORDER)
             if y & 1 != lsb:
-                y = FIELD_ORDER-y
+                y = FIELD_ORDER - y
             point = ecdsa.ellipticcurve.Point(SECP256k1.curve, x, y)
             secret = ecdsa.VerifyingKey.from_public_point(point, curve=SECP256k1)
 
-        key = BIP32Key(secret=secret, chain=chain, depth=depth, index=child, fpr=fpr, public=is_pubkey, testnet=is_testnet)
+        key = BIP32Key(secret=secret, chain=chain, depth=depth, index=child, fpr=fpr, public=is_pubkey,
+                       testnet=is_testnet)
         if not is_pubkey and public:
             key = key.SetPublic()
         return key
-
 
     # Normal class initializer
     def __init__(self, secret, chain, depth, index, fpr, public=False, testnet=False):
@@ -145,7 +147,6 @@ class BIP32Key(object):
         self.parent_fpr = fpr
         self.testnet = testnet
 
-
     # Internal methods not intended to be called externally
     #
     def hmac(self, data):
@@ -153,10 +154,9 @@ class BIP32Key(object):
         Calculate the HMAC-SHA512 of input data using the chain code as key.
 
         Returns a tuple of the left and right halves of the HMAC
-        """         
-        I = hmac.new(self.C, data, hashlib.sha512).digest()
-        return (I[:32], I[32:])
-
+        """
+        i64 = hmac.new(self.C, data, hashlib.sha512).digest()
+        return i64[:32], i64[32:]
 
     def CKDpriv(self, i):
         """
@@ -187,11 +187,11 @@ class BIP32Key(object):
         k_int = (Il_int + pvt_int) % CURVE_ORDER
         if (k_int == 0):
             return None
-        secret = (b'\0'*32 + int_to_string(k_int))[-32:]
-        
-        # Construct and return a new BIP32Key
-        return BIP32Key(secret=secret, chain=Ir, depth=self.depth+1, index=i, fpr=self.Fingerprint(), public=False, testnet=self.testnet)
+        secret = (b'\0' * 32 + int_to_string(k_int))[-32:]
 
+        # Construct and return a new BIP32Key
+        return BIP32Key(secret=secret, chain=Ir, depth=self.depth + 1, index=i, fpr=self.Fingerprint(), public=False,
+                        testnet=self.testnet)
 
     def CKDpub(self, i):
         """
@@ -217,7 +217,7 @@ class BIP32Key(object):
         Il_int = string_to_int(Il)
         if Il_int >= CURVE_ORDER:
             return None
-        point = Il_int*CURVE_GEN + self.K.pubkey.point
+        point = Il_int * CURVE_GEN + self.K.pubkey.point
         if point == INFINITY:
             return None
 
@@ -225,8 +225,8 @@ class BIP32Key(object):
         K_i = ecdsa.VerifyingKey.from_public_point(point, curve=SECP256k1)
 
         # Construct and return a new BIP32Key
-        return BIP32Key(secret=K_i, chain=Ir, depth=self.depth+1, index=i, fpr=self.Fingerprint(), public=True, testnet=self.testnet)
-
+        return BIP32Key(secret=K_i, chain=Ir, depth=self.depth + 1, index=i, fpr=self.Fingerprint(), public=True,
+                        testnet=self.testnet)
 
     # Public methods
     #
@@ -242,55 +242,48 @@ class BIP32Key(object):
         else:
             return self.CKDpub(i)
 
-
     def SetPublic(self):
-        "Convert a private BIP32Key into a public one"
+        """Convert a private BIP32Key into a public one"""
         self.k = None
         self.public = True
 
-
     def PrivateKey(self):
-        "Return private key as string"
+        """Return private key as string"""
         if self.public:
             raise Exception("Publicly derived deterministic keys have no private half")
         else:
             return self.k.to_string()
 
-
     def PublicKey(self):
-        "Return compressed public key encoding"
-        padx = (b'\0'*32 + int_to_string(self.K.pubkey.point.x()))[-32:]
+        """Return compressed public key encoding"""
+        padx = (b'\0' * 32 + int_to_string(self.K.pubkey.point.x()))[-32:]
         if self.K.pubkey.point.y() & 1:
-            ck = b'\3'+padx
+            ck = b'\3' + padx
         else:
-            ck = b'\2'+padx
+            ck = b'\2' + padx
         return ck
 
-
     def ChainCode(self):
-        "Return chain code as string"
+        """Return chain code as string"""
         return self.C
 
-
     def Identifier(self):
-        "Return key identifier as string"
+        """Return key identifier as string"""
         cK = self.PublicKey()
         return hashlib.new('ripemd160', sha256(cK).digest()).digest()
 
-
     def Fingerprint(self):
-        "Return key fingerprint as string"
+        """Return key fingerprint as string"""
         return self.Identifier()[:4]
 
-
     def Address(self):
-        "Return compressed public key address"
+        """Return compressed public key address"""
         addressversion = b'\x00' if not self.testnet else b'\x6f'
         vh160 = addressversion + self.Identifier()
         return Base58.check_encode(vh160)
 
     def P2WPKHoP2SHAddress(self):
-        "Return P2WPKH over P2SH segwit address"
+        """Return P2WPKH over P2SH segwit address"""
         pk_bytes = self.PublicKey()
         assert len(pk_bytes) == 33 and (pk_bytes.startswith(b"\x02") or pk_bytes.startswith(b"\x03")), \
             "Only compressed public keys are compatible with p2sh-p2wpkh addresses. " \
@@ -302,18 +295,16 @@ class BIP32Key(object):
         prefix = b"\xc4" if self.testnet else b"\x05"
         return Base58.check_encode(prefix + address_bytes)
 
-
     def WalletImportFormat(self):
-        "Returns private key encoded for wallet import"
+        """Returns private key encoded for wallet import"""
         if self.public:
             raise Exception("Publicly derived deterministic keys have no private half")
         addressversion = b'\x80' if not self.testnet else b'\xef'
-        raw = addressversion + self.k.to_string() + b'\x01' # Always compressed
+        raw = addressversion + self.k.to_string() + b'\x01'  # Always compressed
         return Base58.check_encode(raw)
 
-
     def ExtendedKey(self, private=True, encoded=True):
-        "Return extended private or public key as string, optionally Base58 encoded"
+        """Return extended private or public key as string, optionally Base58 encoded"""
         if self.public is True and private is True:
             raise Exception("Cannot export an extended private key from a public-only deterministic key")
         if not self.testnet:
@@ -328,7 +319,7 @@ class BIP32Key(object):
             data = self.PublicKey()
         else:
             data = b'\x00' + self.PrivateKey()
-        raw = version+depth+fpr+child+chain+data
+        raw = version + depth + fpr + child + chain + data
         if not encoded:
             return raw
         else:
@@ -337,7 +328,7 @@ class BIP32Key(object):
     # Debugging methods
     #
     def dump(self):
-        "Dump key fields mimicking the BIP0032 test vector format"
+        """Dump key fields mimicking the BIP0032 test vector format"""
         print("   * Identifier")
         print("     * (hex):      ", b2a_hex(self.Identifier()))
         print("     * (fpr):      ", b2a_hex(self.Fingerprint()))
@@ -357,19 +348,19 @@ class BIP32Key(object):
         print("     * (prv b58):  ", self.ExtendedKey(private=True, encoded=True))
 
 
-if __name__ == "__main__":
-    import sys
+def test():
+    from binascii import a2b_hex
 
     # BIP0032 Test vector 1
-    entropy='000102030405060708090A0B0C0D0E0F'.decode('hex')
+    entropy = a2b_hex('000102030405060708090A0B0C0D0E0F')
     m = BIP32Key.fromEntropy(entropy)
     print("Test vector 1:")
-    print("Master (hex):", entropy.encode('hex'))
+    print("Master (hex):", entropy.hex())
     print("* [Chain m]")
     m.dump()
 
     print("* [Chain m/0h]")
-    m = m.ChildKey(0+BIP32_HARDEN)
+    m = m.ChildKey(0 + BIP32_HARDEN)
     m.dump()
 
     print("* [Chain m/0h/1]")
@@ -377,7 +368,7 @@ if __name__ == "__main__":
     m.dump()
 
     print("* [Chain m/0h/1/2h]")
-    m = m.ChildKey(2+BIP32_HARDEN)
+    m = m.ChildKey(2 + BIP32_HARDEN)
     m.dump()
 
     print("* [Chain m/0h/1/2h/2]")
@@ -389,10 +380,11 @@ if __name__ == "__main__":
     m.dump()
 
     # BIP0032 Test vector 2
-    entropy = 'fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542'.decode('hex')
+    entropy = a2b_hex('fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a878481'
+                      '7e7b7875726f6c696663605d5a5754514e4b484542')
     m = BIP32Key.fromEntropy(entropy)
     print("Test vector 2:")
-    print("Master (hex):", entropy.encode('hex'))
+    print("Master (hex):", entropy.hex())
     print("* [Chain m]")
     m.dump()
 
@@ -401,7 +393,7 @@ if __name__ == "__main__":
     m.dump()
 
     print("* [Chain m/0/2147483647h]")
-    m = m.ChildKey(2147483647+BIP32_HARDEN)
+    m = m.ChildKey(2147483647 + BIP32_HARDEN)
     m.dump()
 
     print("* [Chain m/0/2147483647h/1]")
@@ -409,9 +401,13 @@ if __name__ == "__main__":
     m.dump()
 
     print("* [Chain m/0/2147483647h/1/2147483646h]")
-    m = m.ChildKey(2147483646+BIP32_HARDEN)
+    m = m.ChildKey(2147483646 + BIP32_HARDEN)
     m.dump()
 
     print("* [Chain m/0/2147483647h/1/2147483646h/2]")
     m = m.ChildKey(2)
     m.dump()
+
+
+if __name__ == "__main__":
+    test()

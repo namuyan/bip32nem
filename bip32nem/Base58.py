@@ -12,7 +12,7 @@ __base58_radix = len(__base58_alphabet)
 
 
 def __string_to_int(data):
-    "Convert string of bytes Python integer, MSB"
+    """Convert string of bytes Python integer, MSB"""
     val = 0
    
     # Python 2.x compatibility
@@ -25,7 +25,7 @@ def __string_to_int(data):
 
 
 def encode(data):
-    "Encode bytes into Bitcoin base58 string"
+    """Encode bytes into Bitcoin base58 string"""
     enc = ''
     val = __string_to_int(data)
     while val >= __base58_radix:
@@ -40,13 +40,13 @@ def encode(data):
 
 
 def check_encode(raw):
-    "Encode raw bytes into Bitcoin base58 string with checksum"
+    """Encode raw bytes into Bitcoin base58 string with checksum"""
     chk = sha256(sha256(raw).digest()).digest()[:4]
     return encode(raw+chk)
 
 
 def decode(data):
-    "Decode Bitcoin base58 format string to bytes"
+    """Decode Bitcoin base58 format string to bytes"""
     # Python 2.x compatability
     if bytes != str:
         data = bytes(data, 'ascii')
@@ -66,7 +66,7 @@ def decode(data):
 
 
 def check_decode(enc):
-    "Decode bytes from Bitcoin base58 string and test checksum"
+    """Decode bytes from Bitcoin base58 string and test checksum"""
     dec = decode(enc)
     raw, chk = dec[:-4], dec[-4:]
     if chk != sha256(sha256(raw).digest()).digest()[:4]:
@@ -75,8 +75,12 @@ def check_decode(enc):
         return raw
 
 
-if __name__ == '__main__':
-    assert(__base58_radix == 58)
+def test():
+    assert (__base58_radix == 58)
     data = b'now is the time for all good men to come to the aid of their country'
     enc = check_encode(data)
-    assert(check_decode(enc) == data)
+    assert (check_decode(enc) == data)
+
+
+if __name__ == '__main__':
+    test()
