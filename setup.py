@@ -11,6 +11,6 @@ setup(
     url='http://github.com/namuyan/bip32utils',
     description='Utilities for generating and using Bitcoin Hierarchical Deterministic wallets (BIP0032).',
     license='MIT',
-    install_requires=['ecdsa'],
+    install_requires=['ecdsa', 'nem-ed25519'],
     packages=['bip32nem']
 )
