@@ -11,8 +11,8 @@ import ecdsa
 import struct
 import codecs
 from bip32nem import Base58
-
 from hashlib import sha256
+from nem_ed25519 import public_key, get_address
 
 from ecdsa.curves import SECP256k1
 from ecdsa.ecdsa import int_to_string, string_to_int
@@ -282,6 +282,13 @@ class BIP32Key(object):
         vh160 = addressversion + self.Identifier()
         return Base58.check_encode(vh160)
 
+    def NemKeypair(self, prefix=None):
+        if self.public:
+            raise Exception('NEM publicKey derive from secretKey directly')
+        pk = public_key(sk=self.PrivateKey(), encode=bytes)
+        ck = get_address(pk=pk, main_net=bool(not self.testnet), prefix=prefix)
+        return pk, ck
+
     def P2WPKHoP2SHAddress(self):
         """Return P2WPKH over P2SH segwit address"""
         pk_bytes = self.PublicKey()
@@ -337,6 +344,10 @@ class BIP32Key(object):
             print("   * Secret key")
             print("     * (hex):      ", self.PrivateKey().hex())
             print("     * (wif):      ", self.WalletImportFormat())
+            print("   * NEM Keypair")
+            pk, ck = self.NemKeypair()
+            print("     * PublicKey (hex):      ", pk.hex())
+            print("     * Address   (hex):      ", ck)
         print("   * Public key")
         print("     * (hex):      ", self.PublicKey().hex())
         print("   * Chain code")
