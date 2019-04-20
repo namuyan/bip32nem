@@ -15,7 +15,6 @@ from hashlib import sha256
 from nem_ed25519 import public_key, get_address
 
 from ecdsa.curves import SECP256k1
-from ecdsa.ecdsa import int_to_string, string_to_int
 from ecdsa.numbertheory import square_root_mod_prime as sqrt_mod
 
 MIN_ENTROPY_LEN = 128  # bits
@@ -98,7 +97,7 @@ class BIP32Key(object):
             # Recover public curve point from compressed key
             # Python3 FIX
             lsb = secret[0] & 1 if type(secret[0]) == int else ord(secret[0]) & 1
-            x = string_to_int(secret[1:])
+            x = int.from_bytes(secret[1:], 'big')
             ys = (x ** 3 + 7) % FIELD_ORDER  # y^2 = x^3 + 7 mod p
             y = sqrt_mod(ys, FIELD_ORDER)
             if y & 1 != lsb:
@@ -180,14 +179,14 @@ class BIP32Key(object):
         (Il, Ir) = self.hmac(data)
 
         # Construct new key material from Il and current private key
-        Il_int = string_to_int(Il)
+        Il_int = int.from_bytes(Il, 'big')
         if Il_int > CURVE_ORDER:
             return None
-        pvt_int = string_to_int(self.k.to_string())
+        pvt_int = int.from_bytes(self.k.to_string(), 'big')
         k_int = (Il_int + pvt_int) % CURVE_ORDER
         if (k_int == 0):
             return None
-        secret = (b'\0' * 32 + int_to_string(k_int))[-32:]
+        secret = k_int.to_bytes(32, 'big')
 
         # Construct and return a new BIP32Key
         return BIP32Key(secret=secret, chain=Ir, depth=self.depth + 1, index=i, fpr=self.Fingerprint(), public=False,
@@ -214,7 +213,7 @@ class BIP32Key(object):
         (Il, Ir) = self.hmac(data)
 
         # Construct curve point Il*G+K
-        Il_int = string_to_int(Il)
+        Il_int = int.from_bytes(Il, 'big')
         if Il_int >= CURVE_ORDER:
             return None
         point = Il_int * CURVE_GEN + self.K.pubkey.point
@@ -256,7 +255,7 @@ class BIP32Key(object):
 
     def PublicKey(self):
         """Return compressed public key encoding"""
-        padx = (b'\0' * 32 + int_to_string(self.K.pubkey.point.x()))[-32:]
+        padx = self.K.pubkey.point.x().to_bytes(32, 'big')
         if self.K.pubkey.point.y() & 1:
             ck = b'\3' + padx
         else:
