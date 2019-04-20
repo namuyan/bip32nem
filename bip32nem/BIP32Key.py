@@ -10,7 +10,7 @@ import hashlib
 import ecdsa
 import struct
 import codecs
-from bip32nem import Base58
+from bip32nem.base58 import check_decode, check_encode
 from hashlib import sha256
 from nem_ed25519 import public_key, get_address
 
@@ -59,7 +59,7 @@ class BIP32Key(object):
         If public is True, return a public-only key regardless of input type.
         """
         # Sanity checks
-        raw = Base58.check_decode(xkey)
+        raw = check_decode(xkey)
         if len(raw) != 78:
             raise ValueError("extended key format wrong length")
 
@@ -280,7 +280,7 @@ class BIP32Key(object):
         """Return compressed public key address"""
         addressversion = b'\x00' if not self.testnet else b'\x6f'
         vh160 = addressversion + self.Identifier()
-        return Base58.check_encode(vh160)
+        return check_encode(vh160)
 
     def NemKeypair(self, prefix=None):
         if self.public:
@@ -300,7 +300,7 @@ class BIP32Key(object):
         script_sig = push_20 + pk_hash
         address_bytes = hashlib.new('ripemd160', sha256(script_sig).digest()).digest()
         prefix = b"\xc4" if self.testnet else b"\x05"
-        return Base58.check_encode(prefix + address_bytes)
+        return check_encode(prefix + address_bytes)
 
     def WalletImportFormat(self):
         """Returns private key encoded for wallet import"""
@@ -308,10 +308,10 @@ class BIP32Key(object):
             raise Exception("Publicly derived deterministic keys have no private half")
         addressversion = b'\x80' if not self.testnet else b'\xef'
         raw = addressversion + self.k.to_string() + b'\x01'  # Always compressed
-        return Base58.check_encode(raw)
+        return check_encode(raw)
 
     def ExtendedKey(self, private=True, encoded=True):
-        """Return extended private or public key as string, optionally Base58 encoded"""
+        """Return extended private or public key as string, optionally base58 encoded"""
         if self.public is True and private is True:
             raise Exception("Cannot export an extended private key from a public-only deterministic key")
         if not self.testnet:
@@ -330,7 +330,7 @@ class BIP32Key(object):
         if not encoded:
             return raw
         else:
-            return Base58.check_encode(raw)
+            return check_encode(raw)
 
     # Debugging methods
     #
