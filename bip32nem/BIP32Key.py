@@ -7,22 +7,26 @@
 import os
 import hmac
 import hashlib
-import ecdsa
 import struct
 import codecs
 from bip32nem.base58 import check_decode, check_encode
 from hashlib import sha256
 from nem_ed25519 import public_key, get_address
 
+import ecdsa
 from ecdsa.curves import SECP256k1
 from ecdsa.numbertheory import square_root_mod_prime as sqrt_mod
 
+VerifyKey = ecdsa.VerifyingKey.from_public_point
+SigningKey = ecdsa.SigningKey.from_string
+PointObject = ecdsa.ellipticcurve.Point  # Point class
+CURVE_GEN = ecdsa.ecdsa.generator_secp256k1  # Point class
+CURVE_ORDER = CURVE_GEN.order()  # int
+FIELD_ORDER = SECP256k1.curve.p()  # int
+INFINITY = ecdsa.ellipticcurve.INFINITY  # Point
+
 MIN_ENTROPY_LEN = 128  # bits
 BIP32_HARDEN = 0x80000000  # choose from hardened set of child keys
-CURVE_GEN = ecdsa.ecdsa.generator_secp256k1
-CURVE_ORDER = CURVE_GEN.order()
-FIELD_ORDER = SECP256k1.curve.p()
-INFINITY = ecdsa.ellipticcurve.INFINITY
 EX_MAIN_PRIVATE = [codecs.decode('0488ade4', 'hex')]  # Version strings for mainnet extended private keys
 EX_MAIN_PUBLIC = [codecs.decode('0488b21e', 'hex'),
                   codecs.decode('049d7cb2', 'hex')]  # Version strings for mainnet extended public keys
@@ -102,8 +106,8 @@ class BIP32Key(object):
             y = sqrt_mod(ys, FIELD_ORDER)
             if y & 1 != lsb:
                 y = FIELD_ORDER - y
-            point = ecdsa.ellipticcurve.Point(SECP256k1.curve, x, y)
-            secret = ecdsa.VerifyingKey.from_public_point(point, curve=SECP256k1)
+            point = PointObject(SECP256k1.curve, x, y)
+            secret = VerifyKey(point, curve=SECP256k1)
 
         key = BIP32Key(secret=secret, chain=chain, depth=depth, index=child, fpr=fpr, public=is_pubkey,
                        testnet=is_testnet)
@@ -134,7 +138,7 @@ class BIP32Key(object):
 
         self.public = public
         if public is False:
-            self.k = ecdsa.SigningKey.from_string(secret, curve=SECP256k1)
+            self.k = SigningKey(secret, curve=SECP256k1)
             self.K = self.k.get_verifying_key()
         else:
             self.k = None
@@ -221,7 +225,7 @@ class BIP32Key(object):
             return None
 
         # Retrieve public key based on curve point
-        K_i = ecdsa.VerifyingKey.from_public_point(point, curve=SECP256k1)
+        K_i = VerifyKey(point, curve=SECP256k1)
 
         # Construct and return a new BIP32Key
         return BIP32Key(secret=K_i, chain=Ir, depth=self.depth + 1, index=i, fpr=self.Fingerprint(), public=True,
